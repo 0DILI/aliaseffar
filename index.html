@@ -137,7 +137,6 @@ button{font:inherit;background:none;border:0;cursor:pointer;color:inherit}
   margin:-.05em -.14em -.15em -.04em;
 }
 .hero__title .word>span{display:inline-block;will-change:transform}
-.js-anim .hero__title .word>span{transform:translateY(115%)}
 .hero__title .row{display:flex;align-items:flex-end;gap:.18em;flex-wrap:wrap}
 .hero__title .for{display:inline-flex;align-items:center;gap:.35em;font-size:.62em;font-style:italic;font-weight:300;color:rgba(10,13,34,.7)}
 .hero__title .stamp{
@@ -342,10 +341,10 @@ button{font:inherit;background:none;border:0;cursor:pointer;color:inherit}
 /* Big mark */
 .bigmark{font-family:var(--serif);font-weight:300;font-style:italic;font-variation-settings:"opsz" 144;font-size:clamp(80px,22vw,360px);line-height:.85;letter-spacing:-.04em;color:rgba(255,255,255,.05);text-align:center;margin:80px 0 0;user-select:none;white-space:nowrap}
 
-/* Reveal helper — only hides when JS is confirmed running and GSAP is ready */
+/* Reveal helper — visible by default; entrance animation injects hidden state at runtime if GSAP is ready */
 .reveal{transition:opacity 1s ease,transform 1s cubic-bezier(.2,.6,.2,1)}
-.js-anim .reveal{opacity:0;transform:translateY(40px)}
-.js-anim .reveal.in{opacity:1;transform:none}
+.reveal.is-hidden{opacity:0;transform:translateY(40px)}
+.reveal.is-hidden.in{opacity:1;transform:none}
 
 .count{font-variant-numeric:tabular-nums}
 
@@ -809,8 +808,6 @@ bindCursorLinks();
   function finish(){
     if(done) return; done=true;
     if(window.gsap){
-      // Enable hidden initial states only now, so GSAP can animate them in.
-      document.documentElement.classList.add('js-anim');
       gsap.to('#loader',{y:'-100%',duration:1,ease:'power3.inOut',delay:.15,onComplete:()=>{
         const l = document.getElementById('loader'); if(l) l.remove();
         intro();
@@ -821,7 +818,6 @@ bindCursorLinks();
       if(l){ l.style.transition='opacity .4s ease'; l.style.opacity='0'; setTimeout(()=>l.remove(),420); }
     }
   }
-  // Safety net: if for any reason finish() never runs within 4s, force-finish.
   setTimeout(finish, 4000);
 })();
 
@@ -945,56 +941,61 @@ bindCursorLinks();
   loop();
 })();
 
-/* Intro — every step is independent so one failure can't blank the page */
+/* Intro — content is visible by default; we only ENHANCE with motion.
+   Each step is wrapped so one failure can't take down the rest. */
 function intro(){
-  if(!window.gsap){ forceShowAll(); return; }
+  if(!window.gsap) return;
   const ST = (typeof ScrollTrigger !== 'undefined') ? ScrollTrigger : null;
   if(ST){ try{ gsap.registerPlugin(ST); }catch(e){} }
 
-  // Hero word reveal — explicit from/to, runs regardless of ScrollTrigger.
+  // Hero word reveal — gsap.from sets the hidden start, animates to the natural state.
   try{
-    gsap.fromTo('.hero__title .word > span',
-      {yPercent:105},
-      {yPercent:0, duration:1.1, ease:'expo.out', stagger:.08, delay:.05}
-    );
-  }catch(e){ document.querySelectorAll('.hero__title .word > span').forEach(s=>s.style.transform='none'); }
-
-  try{
-    gsap.fromTo('.hero__top, .hero__meta, .hero__cta-row',
-      {opacity:0,y:30},
-      {opacity:1,y:0,duration:1,ease:'power3.out',stagger:.08,delay:.7}
+    gsap.from('.hero__title .word > span',
+      {yPercent:115, duration:1.1, ease:'expo.out', stagger:.08, delay:.05, immediateRender:true}
     );
   }catch(e){}
 
-  // Marquee — independent
+  // Hero supporting elements
+  try{
+    gsap.from('.hero__top, .hero__meta, .hero__cta-row',
+      {opacity:0,y:30,duration:1,ease:'power3.out',stagger:.08,delay:.7,immediateRender:true}
+    );
+  }catch(e){}
+
+  // Marquee
   try{
     const m = document.getElementById('marquee');
     if(m){ gsap.to(m,{xPercent:-50, duration:40, ease:'none', repeat:-1}); }
   }catch(e){}
 
-  // Anything that needs ScrollTrigger — only attempt if it loaded.
+  // Reveal blocks — add hidden state ONLY for elements that haven't entered the viewport yet.
+  // If ScrollTrigger isn't available, leave them visible.
   if(ST){
     try{
-      document.querySelectorAll('.count[data-to]').forEach(el=>{
-        const to = parseInt(el.dataset.to,10);
-        if(isNaN(to))return;
-        ST.create({
-          trigger:el, start:'top 90%', once:true,
-          onEnter:()=>{
-            gsap.to({n:0},{n:to,duration:1.6,ease:'power3.out',onUpdate(){el.textContent = Math.round(this.targets()[0].n)}});
-          }
-        });
-      });
-    }catch(e){}
-
-    try{
       document.querySelectorAll('.reveal').forEach(el=>{
+        const r = el.getBoundingClientRect();
+        if(r.top < window.innerHeight*.85) return; // already in view → leave alone
+        el.classList.add('is-hidden');
         ST.create({
           trigger:el, start:'top 85%', once:true,
           onEnter:()=>el.classList.add('in')
         });
       });
-    }catch(e){ document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in')); }
+    }catch(e){}
+
+    try{
+      document.querySelectorAll('.count[data-to]').forEach(el=>{
+        const to = parseInt(el.dataset.to,10);
+        if(isNaN(to))return;
+        const fromZero = ()=>{
+          el.textContent = '0';
+          gsap.to({n:0},{n:to,duration:1.6,ease:'power3.out',onUpdate(){el.textContent = Math.round(this.targets()[0].n)}});
+        };
+        const r = el.getBoundingClientRect();
+        if(r.top < window.innerHeight*.9){ fromZero(); }
+        else { ST.create({trigger:el, start:'top 90%', once:true, onEnter:fromZero}); }
+      });
+    }catch(e){}
 
     try{
       gsap.to('.about__media img', {
@@ -1004,20 +1005,8 @@ function intro(){
       gsap.to('#bigmark',{xPercent:-12, ease:'none', scrollTrigger:{trigger:'#engine', start:'top bottom', end:'bottom top', scrub:true}});
       gsap.fromTo('.cta__title',{scale:.94},{scale:1, ease:'none', scrollTrigger:{trigger:'.cta', start:'top 80%', end:'bottom 40%', scrub:true}});
     }catch(e){}
-  } else {
-    // No ScrollTrigger — show counters at final value and reveals immediately.
-    document.querySelectorAll('.count[data-to]').forEach(el=>{ el.textContent = el.dataset.to; });
-    document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));
   }
 }
-
-/* Final safety net — if anything in the hero is still hidden 3s in, show it. */
-function forceShowAll(){
-  document.querySelectorAll('.hero__title .word > span').forEach(s=>{ s.style.transform='none'; });
-  document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));
-  document.querySelectorAll('.count[data-to]').forEach(el=>{ if(el.textContent==='0') el.textContent = el.dataset.to; });
-}
-setTimeout(forceShowAll, 3000);
 
 /* FAQ accordion */
 document.querySelectorAll('.faq__item').forEach(item=>{
