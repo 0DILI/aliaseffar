@@ -954,10 +954,11 @@ function intro(){
     );
   }catch(e){}
 
-  // Hero supporting elements — tight timing so the page reads as "settled" quickly
+  // Hero supporting elements — slide up only, never fade.
+  // (Opacity fades + delays read as "broken/dim" if captured mid-flight.)
   try{
     gsap.from('.hero__top, .hero__meta, .hero__cta-row',
-      {opacity:0,y:18,duration:.8,ease:'power3.out',stagger:.06,delay:.35,immediateRender:true}
+      {y:14,duration:.6,ease:'power2.out',stagger:.05,delay:.1,immediateRender:true}
     );
   }catch(e){}
 
