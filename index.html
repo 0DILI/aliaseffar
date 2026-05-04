@@ -109,9 +109,8 @@ button{font:inherit;background:none;border:0;cursor:pointer;color:inherit}
 .hero{
   position:relative;min-height:100vh;padding:130px 0 80px;overflow:hidden;
   background:
-    radial-gradient(60% 50% at 85% 18%, rgba(255,111,168,.22), transparent 60%),
-    radial-gradient(45% 45% at 8% 80%, rgba(125,108,255,.16), transparent 60%),
-    radial-gradient(40% 40% at 70% 90%, rgba(255,127,90,.18), transparent 60%),
+    radial-gradient(70% 55% at 95% 0%, rgba(255,111,168,.16), transparent 65%),
+    radial-gradient(45% 45% at 0% 95%, rgba(125,108,255,.09), transparent 70%),
     var(--paper);
 }
 .hero__bg{position:absolute;inset:0;z-index:0;pointer-events:none}
@@ -144,7 +143,7 @@ button{font:inherit;background:none;border:0;cursor:pointer;color:inherit}
   background:var(--grad);font-size:.45em;color:#fff;font-family:var(--sans);font-weight:600;letter-spacing:0;
 }
 .hero__meta{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:30px;margin-top:60px;align-items:end}
-.hero__meta p{margin:0;font-size:14px;line-height:1.55;color:rgba(10,13,34,.7);max-width:46ch}
+.hero__meta p{margin:0;font-size:14px;line-height:1.55;color:rgba(10,13,34,.85);max-width:46ch}
 .hero__meta .stat{font-family:var(--serif);font-size:clamp(40px,5.5vw,80px);line-height:1;font-weight:400;letter-spacing:-.03em}
 .hero__meta .stat sup{font-size:.45em;vertical-align:super;color:var(--pink);font-style:italic}
 .hero__meta .stat em{font-style:italic;color:var(--pink)}
@@ -903,7 +902,7 @@ bindCursorLinks();
         vec3 col = mix(c1, c2, smoothstep(.35, .75, b));
         float edge = pow(1.0 - max(dot(normalize(vNormal), vec3(0.,0.,1.)), 0.), 1.6);
         col = mix(col, vec3(1.), edge*.18);
-        gl_FragColor = vec4(col, .92);
+        gl_FragColor = vec4(col, .55);
       }
     `
   });
@@ -932,9 +931,9 @@ bindCursorLinks();
     blob.rotation.y = t*.18;
     blob.rotation.x = Math.sin(t*.2)*.18;
     const wide = window.innerWidth > 920;
-    blob.position.x = wide ? 1.4 : 0;
-    blob.position.y = wide ? -0.1 : -0.6;
-    blob.scale.setScalar(wide ? 1 : .8);
+    blob.position.x = wide ? 1.85 : 0;
+    blob.position.y = wide ? 0.55 : -0.6;
+    blob.scale.setScalar(wide ? .85 : .7);
     renderer.render(scene,camera);
     requestAnimationFrame(loop);
   }
@@ -955,10 +954,10 @@ function intro(){
     );
   }catch(e){}
 
-  // Hero supporting elements
+  // Hero supporting elements — tight timing so the page reads as "settled" quickly
   try{
     gsap.from('.hero__top, .hero__meta, .hero__cta-row',
-      {opacity:0,y:30,duration:1,ease:'power3.out',stagger:.08,delay:.7,immediateRender:true}
+      {opacity:0,y:18,duration:.8,ease:'power3.out',stagger:.06,delay:.35,immediateRender:true}
     );
   }catch(e){}
 
